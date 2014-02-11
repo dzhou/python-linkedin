@@ -75,6 +75,10 @@ class LinkedInAuthentication(object):
     ACCESS_TOKEN_URL = 'https://www.linkedin.com/uas/oauth2/accessToken'
 
     def __init__(self, key, secret, redirect_uri, permissions=None):
+        self.AUTHORIZATION_URL = 'https://www.linkedin.com/uas/oauth2/authorization'
+        self.ACCESS_TOKEN_URL = 'https://www.linkedin.com/uas/oauth2/accessToken?' + \
+                        'grant_type={grant_type}&code={code}&redirect_uri={redirect_uri}' + \
+                        '&client_id={client_id}&client_secret={client_secret}'
         self.key = key
         self.secret = secret
         self.redirect_uri = redirect_uri
@@ -112,9 +116,19 @@ class LinkedInAuthentication(object):
               'redirect_uri': self.redirect_uri,
               'client_id': self.key,
               'client_secret': self.secret}
-        response = requests.post(self.ACCESS_TOKEN_URL, data=qd, timeout=timeout)
-        raise_for_error(response)
-        response = response.json()
+
+        try:
+            post_url = self.ACCESS_TOKEN_URL.format(timeout=timeout, **qd)
+            response = requests.post(post_url)
+            response.raise_for_status()
+            response = response.json()
+        except (requests.HTTPError, requests.ConnectionError), error:
+            raise LinkedInHTTPError(error.message)
+        else:
+            if 'error' in response:
+                self._error = response['error_description']
+                raise LinkedInError(response)
+
         self.token = AccessToken(response['access_token'], response['expires_in'])
         return self.token
 
