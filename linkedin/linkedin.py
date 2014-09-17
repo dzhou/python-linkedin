@@ -117,20 +117,18 @@ class LinkedInAuthentication(object):
               'client_id': self.key,
               'client_secret': self.secret}
 
-        try:
-            post_url = self.ACCESS_TOKEN_URL.format(timeout=timeout, **qd)
-            response = requests.post(post_url)
-            response.raise_for_status()
-            response = response.json()
-        except (requests.HTTPError, requests.ConnectionError), error:
-            raise LinkedInHTTPError(error.message)
-        else:
-            if 'error' in response:
-                self._error = response['error_description']
-                raise LinkedInError(response)
+        post_url = self.ACCESS_TOKEN_URL.format(timeout=timeout, **qd)
+        response = requests.post(post_url)
+        raise_for_error(response)
+        response = response.json()
+
+        if 'error' in response:
+            self._error = response['error_description']
+            raise LinkedInError(response)
 
         self.token = AccessToken(response['access_token'], response['expires_in'])
         return self.token
+
 
 
 class LinkedInSelector(object):
